@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import sys
 import csv
@@ -22,13 +24,18 @@ clock = pygame.time.Clock()
 # Main game loop flag
 running = True
 
+DEFAULT_IMAGE_SIZE = (360, 200)
+
 
 # Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((50, 50))
-        self.image.fill(WHITE)
+        self.images = []
+        img = pygame.image.load(os.path.join('images/Base', 'Knight_01__IDLE_000.png')).convert()
+        self.images.append(img)
+        self.images = pygame.transform.scale(img, DEFAULT_IMAGE_SIZE)
+        self.image = self.images
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
         self.change_x = 0
