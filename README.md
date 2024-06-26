@@ -1,4 +1,6 @@
 # A scrolling platformer
 ### Current bugs:
 * Goofy ah hitbox for the player
-  * Probably because of the scaling while importing the image 
+  * Probably because of the scaling while importing the image
+
+**You can change the level.csv file and it will change the level in the game**
