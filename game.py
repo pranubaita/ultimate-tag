@@ -1,5 +1,4 @@
 import os
-
 import pygame
 import sys
 import csv
@@ -17,6 +16,8 @@ TILE_SIZE = 40
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 
 # Clock for controlling the frame rate
 clock = pygame.time.Clock()
@@ -24,18 +25,15 @@ clock = pygame.time.Clock()
 # Main game loop flag
 running = True
 
-DEFAULT_IMAGE_SIZE = (360, 200)
+RECT_HEIGHT = 80
+RECT_WIDTH = int(RECT_HEIGHT * 1.35)  # 1:1.5 ratio
 
 
 # Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.images = []
-        img = pygame.image.load(os.path.join('images/Base', 'Knight_01__IDLE_000.png')).convert()
-        self.images.append(img)
-        self.images = pygame.transform.scale(img, DEFAULT_IMAGE_SIZE)
-        self.image = self.images
+        self.image = pygame.Surface((RECT_WIDTH, RECT_HEIGHT), pygame.SRCALPHA)
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
         self.change_x = 0
@@ -43,6 +41,10 @@ class Player(pygame.sprite.Sprite):
         self.jump_power = -500  # Pixels per second
         self.gravity = 1500  # Pixels per second^2
         self.on_ground = False
+
+        # Load player image and scale it to fit the rectangle
+        self.player_image = pygame.image.load(os.path.join('images/Base', 'Knight_01__IDLE_000.png')).convert_alpha()
+        self.player_image = pygame.transform.scale(self.player_image, (RECT_WIDTH, RECT_HEIGHT))
 
     def update(self, delta_time):
         # Apply gravity
@@ -59,6 +61,12 @@ class Player(pygame.sprite.Sprite):
             self.on_ground = True
         else:
             self.on_ground = False
+
+        # Draw the hollow rectangle and the player image inside it
+        self.image.fill((0, 0, 0, 0))  # Clear the surface
+        pygame.draw.rect(self.image, GREEN, self.image.get_rect(), 5)  # Hollow rectangle
+        image_rect = self.player_image.get_rect(center=self.image.get_rect().center)
+        self.image.blit(self.player_image, image_rect)
 
     def jump(self):
         if self.on_ground:
@@ -77,7 +85,7 @@ class Player(pygame.sprite.Sprite):
 
 # Platform class
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, color=(0, 255, 0)):
+    def __init__(self, x, y, width, height, color=GREEN):
         super().__init__()
         self.image = pygame.Surface((width, height))
         self.image.fill(color)
@@ -107,8 +115,7 @@ class Level:
                         self.platform_list.add(platform)
                         self.all_sprites.add(platform)
                     elif cell == '2':
-                        obstacle = Platform(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE,
-                                            color=(255, 0, 0))  # Red obstacle
+                        obstacle = Platform(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, color=RED)  # Red obstacle
                         self.platform_list.add(obstacle)
                         self.all_sprites.add(obstacle)
 
