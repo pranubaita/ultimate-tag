@@ -11,8 +11,10 @@ SCREEN_WIDTH = 1600
 SCREEN_HEIGHT = 900
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Scrolling Platformer")
+
 # Tile dimensions
 TILE_SIZE = 40
+
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -25,26 +27,35 @@ clock = pygame.time.Clock()
 # Main game loop flag
 running = True
 
+# Rectangle dimensions
 RECT_HEIGHT = 80
-RECT_WIDTH = int(RECT_HEIGHT * 1.35)  # 1:1.5 ratio
+RECT_WIDTH = int(RECT_HEIGHT * 0.5)  # 1:1.35 ratio
+
+# Image dimensions
+IMAGE_WIDTH = int(RECT_HEIGHT * 1.35)
+IMAGE_HEIGHT = RECT_HEIGHT
+
+# Offset for the player image
+WIDTH_OFFSET = 17
 
 
 # Player class
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((RECT_WIDTH, RECT_HEIGHT), pygame.SRCALPHA)
+        self.image = pygame.Surface((RECT_WIDTH, RECT_HEIGHT), pygame.SRCALPHA)  # Empty surface for compatibility
         self.rect = self.image.get_rect()
         self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
         self.change_x = 0
         self.change_y = 0
-        self.jump_power = -500  # Pixels per second
+        self.jump_power = -700  # Pixels per second
         self.gravity = 1500  # Pixels per second^2
         self.on_ground = False
+        self.facing_right = True  # Track the direction the player is facing
 
-        # Load player image and scale it to fit the rectangle
+        # Load and scale player image once
         self.player_image = pygame.image.load(os.path.join('images/Base', 'Knight_01__IDLE_000.png')).convert_alpha()
-        self.player_image = pygame.transform.scale(self.player_image, (RECT_WIDTH, RECT_HEIGHT))
+        self.player_image = pygame.transform.scale(self.player_image, (IMAGE_WIDTH, IMAGE_HEIGHT))
 
     def update(self, delta_time):
         # Apply gravity
@@ -62,11 +73,20 @@ class Player(pygame.sprite.Sprite):
         else:
             self.on_ground = False
 
-        # Draw the hollow rectangle and the player image inside it
-        self.image.fill((0, 0, 0, 0))  # Clear the surface
-        pygame.draw.rect(self.image, GREEN, self.image.get_rect(), 5)  # Hollow rectangle
-        image_rect = self.player_image.get_rect(center=self.image.get_rect().center)
-        self.image.blit(self.player_image, image_rect)
+    def draw(self, surface):
+        # Draw the hollow rectangle
+        pygame.draw.rect(surface, GREEN, self.rect, 5)
+
+        # Ensure the image is flipped correctly without scaling
+        if not self.facing_right:
+            flipped_image = pygame.transform.flip(self.player_image, True, False)
+        else:
+            flipped_image = self.player_image
+
+        # Offset the image within the rect
+        offset_x = WIDTH_OFFSET if self.facing_right else -WIDTH_OFFSET
+        image_rect = flipped_image.get_rect(center=(self.rect.centerx + offset_x, self.rect.centery))
+        surface.blit(flipped_image, image_rect)
 
     def jump(self):
         if self.on_ground:
@@ -75,23 +95,30 @@ class Player(pygame.sprite.Sprite):
 
     def go_left(self):
         self.change_x = -300  # Pixels per second
+        self.facing_right = False  # Facing left
 
     def go_right(self):
         self.change_x = 300  # Pixels per second
+        self.facing_right = True  # Facing right
 
     def stop(self):
         self.change_x = 0
 
+    def change_box_size(self, width, height):
+        self.rect = pygame.Rect(self.rect.x, self.rect.y, width, height)
+        self.rect.center = (self.rect.centerx, self.rect.centery)
+
 
 # Platform class
 class Platform(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, color=GREEN):
+    def __init__(self, x, y, width, height, color=GREEN, one_way=False):
         super().__init__()
         self.image = pygame.Surface((width, height))
         self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.one_way = one_way
 
 
 class Level:
@@ -118,6 +145,10 @@ class Level:
                         obstacle = Platform(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, color=RED)  # Red obstacle
                         self.platform_list.add(obstacle)
                         self.all_sprites.add(obstacle)
+                    elif cell == '3':  # One-way platform
+                        one_way_platform = Platform(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, one_way=True)
+                        self.platform_list.add(one_way_platform)
+                        self.all_sprites.add(one_way_platform)
 
     def update(self, delta_time):
         self.all_sprites.update(delta_time)
@@ -125,6 +156,7 @@ class Level:
     def draw(self, screen):
         screen.fill(BLACK)
         self.all_sprites.draw(screen)
+        self.player.draw(screen)
 
     def scroll(self, delta_time):
         # Define scrolling boundaries
@@ -200,6 +232,8 @@ def main():
 
         if pygame.K_SPACE in pressed_keys:
             level.player.jump()
+        if pygame.K_UP in pressed_keys:
+            level.player.jump()
 
         # Update level
         level.update(delta_time)
@@ -208,9 +242,19 @@ def main():
         player_hit_list = pygame.sprite.spritecollide(level.player, level.platform_list, False)
         for platform in player_hit_list:
             if level.player.change_y > 0:  # Falling down
-                level.player.rect.bottom = platform.rect.top
-                level.player.change_y = 0
-                level.player.on_ground = True
+                if platform.one_way:
+                    if level.player.rect.bottom <= platform.rect.top + 10:
+                        level.player.rect.bottom = platform.rect.top
+                        level.player.change_y = 0
+                        level.player.on_ground = True
+                else:
+                    level.player.rect.bottom = platform.rect.top
+                    level.player.change_y = 0
+                    level.player.on_ground = True
+            elif level.player.change_y < 0:  # Moving up
+                if level.player.rect.top <= platform.rect.bottom:
+                    level.player.rect.top = platform.rect.bottom
+                    level.player.change_y = 0
 
         # Scroll level
         level.scroll(delta_time)
@@ -222,7 +266,7 @@ def main():
         pygame.display.flip()
 
         # Cap the frame rate to 60 FPS
-        clock.tick(120)
+        clock.tick(60)
 
     pygame.quit()
     sys.exit()
