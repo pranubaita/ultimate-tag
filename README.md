@@ -5,3 +5,8 @@
  
 
 **You can change the level.csv file and it will change the level in the game**
+
+# TO-DO
+* Add background
+* Add animation
+* Create the game world
