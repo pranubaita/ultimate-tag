@@ -1,12 +1,3 @@
-# A scrolling platformer
-### Current bugs:
-* Goofy ah hitbox for the player(FIXED)
-  * Probably because of the scaling while importing the image
- 
+# Ultimate Tag
+Ultimate Tag is a fast-paced two-player game where players switch roles between the "Tagger" and the "Runner." The goal is to avoid being the Tagger when the countdown ends—only the Runner wins! With simple controls and intense gameplay, it's a thrilling test of speed, strategy, and timing.
 
-**You can change the level.csv file and it will change the level in the game**
-
-# TO-DO
-* Add background
-* Add animation
-* Create the game world
